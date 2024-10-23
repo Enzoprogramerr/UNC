@@ -1,18 +1,3 @@
-"""app = FastAPI()
-
-Recibe solicitudes HTTP en las rutas y archivos .//items/{item_id}
-Ambas rutas toman operaciones (también conocidas como métodos HTTP).GET
-La ruta tiene un parámetro path que debe ser un archivo ./items/{item_id}item_idint
-La ruta de acceso tiene un parámetro de consulta opcional ./items/{item_id}strq
-
-@app.get("/")
-async def read_root():
-    return {"Hello": "World"}
-
-
-@app.get("/items/{item_id}")
-async def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}"""
 from typing import Union
 from fastapi import FastAPI
 from fastapi import FastAPI, Depends, HTTPException
@@ -21,6 +6,12 @@ from sqlalchemy.orm import sessionmaker, Session
 from dotenv import load_dotenv
 import os
 from config import *
+import json
+from sqlalchemy.sql import text
+from typing import List
+from pydantic import BaseModel
+
+
 
 load_dotenv()
 
@@ -43,6 +34,16 @@ def get_db():
 
     finally:
         db.close()
+
+class Docente(BaseModel):
+    id: int
+    apellido: str
+    nombre: str
+    dni: str
+    email: str
+
+    class Config:
+        orm_mode = True
         
 @app.post("/docentes/")
 def create_docente(apellido: str, nombre: str, dni: str, email: str, db: Session = Depends(get_db)):
@@ -55,7 +56,8 @@ def create_docente(apellido: str, nombre: str, dni: str, email: str, db: Session
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al crear docente: {e}")
 
-@app.get("/docentes/")
+@app.get("/docentes/",
+response_model=List[Docente])
 def read_docentes(db: Session = Depends(get_db)):
     result = db.execute(text("SELECT * FROM docente"))
     docentes = result.fetchall()
