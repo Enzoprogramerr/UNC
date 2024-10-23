@@ -1,6 +1,3 @@
-from typing import Union
-from fastapi import FastAPI
-
 """app = FastAPI()
 
 Recibe solicitudes HTTP en las rutas y archivos .//items/{item_id}
@@ -16,7 +13,8 @@ async def read_root():
 @app.get("/items/{item_id}")
 async def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}"""
-
+from typing import Union
+from fastapi import FastAPI
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
@@ -42,6 +40,7 @@ def get_db():
     db = SessionLocal()
     try:
         yield db
+
     finally:
         db.close()
         
@@ -54,7 +53,7 @@ def create_docente(apellido: str, nombre: str, dni: str, email: str, db: Session
         return {"message": "Docente creado exitosamente"}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error al crear docente: {e}")
 
 @app.get("/docentes/")
 def read_docentes(db: Session = Depends(get_db)):
