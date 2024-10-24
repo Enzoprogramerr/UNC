@@ -44,6 +44,7 @@ class Docente(BaseModel):
 
     class Config:
         orm_mode = True
+ 
         
 @app.post("/docentes/")
 def create_docente(apellido: str, nombre: str, dni: str, email: str, db: Session = Depends(get_db)):
@@ -62,3 +63,5 @@ def read_docentes(db: Session = Depends(get_db)):
     result = db.execute(text("SELECT * FROM docente"))
     docentes = result.fetchall()
     return docentes
+
+

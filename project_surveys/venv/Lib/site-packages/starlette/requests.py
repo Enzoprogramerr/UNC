@@ -14,11 +14,12 @@ from starlette.types import Message, Receive, Scope, Send
 
 try:
     from multipart.multipart import parse_options_header
-except ModuleNotFoundError:  # pragma: nocover
-    parse_options_header = None
+except ModuleNotFoundError:  # pragma: no cover
+    parse_options_header = None  # type: ignore
 
 
 if typing.TYPE_CHECKING:
+    from starlette.applications import Starlette
     from starlette.routing import Router
 
 
@@ -93,7 +94,7 @@ class HTTPConnection(typing.Mapping[str, typing.Any]):
 
     @property
     def url(self) -> URL:
-        if not hasattr(self, "_url"):
+        if not hasattr(self, "_url"):  # pragma: no branch
             self._url = URL(scope=self.scope)
         return self._url
 
@@ -122,7 +123,7 @@ class HTTPConnection(typing.Mapping[str, typing.Any]):
 
     @property
     def query_params(self) -> QueryParams:
-        if not hasattr(self, "_query_params"):
+        if not hasattr(self, "_query_params"):  # pragma: no branch
             self._query_params = QueryParams(self.scope["query_string"])
         return self._query_params
 
@@ -175,8 +176,10 @@ class HTTPConnection(typing.Mapping[str, typing.Any]):
         return self._state
 
     def url_for(self, name: str, /, **path_params: typing.Any) -> URL:
-        router: Router = self.scope["router"]
-        url_path = router.url_path_for(name, **path_params)
+        url_path_provider: Router | Starlette | None = self.scope.get("router") or self.scope.get("app")
+        if url_path_provider is None:
+            raise RuntimeError("The `url_for` method can only be used inside a Starlette application or with a router.")
+        url_path = url_path_provider.url_path_for(name, **path_params)
         return url_path.make_absolute_url(base_url=self.base_url)
 
 
@@ -237,7 +240,7 @@ class Request(HTTPConnection):
         return self._body
 
     async def json(self) -> typing.Any:
-        if not hasattr(self, "_json"):
+        if not hasattr(self, "_json"):  # pragma: no branch
             body = await self.body()
             self._json = json.loads(body)
         return self._json
@@ -276,7 +279,7 @@ class Request(HTTPConnection):
         return AwaitableOrContextManagerWrapper(self._get_form(max_files=max_files, max_fields=max_fields))
 
     async def close(self) -> None:
-        if self._form is not None:
+        if self._form is not None:  # pragma: no branch
             await self._form.close()
 
     async def is_disconnected(self) -> bool:
