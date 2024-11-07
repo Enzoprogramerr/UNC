@@ -42,9 +42,12 @@ class Docente(BaseModel):
     dni: str
     email: str
 
-    class Config:
+class Respuesta(BaseModel): 
+    respuesta: str 
+    fecha: str 
+    
+    class Config: 
         orm_mode = True
- 
         
 @app.post("/docentes/")
 def create_docente(apellido: str, nombre: str, dni: str, email: str, db: Session = Depends(get_db)):
@@ -64,4 +67,21 @@ def read_docentes(db: Session = Depends(get_db)):
     docentes = result.fetchall()
     return docentes
 
-
+@app.post("/respuestas/")
+def create_respuesta(respuesta: Respuesta, db: Session = Depends(get_db)):
+    try:
+        id_pregunta = 1  
+        id_encuesta = 2  
+        
+        query = text("INSERT INTO respuestas (respuesta, fecha, pregunta, encuesta) VALUES (:respuesta, :fecha, :pregunta, :encuesta)")
+        db.execute(query, {
+            "respuesta": respuesta.respuesta,
+            "fecha": respuesta.fecha,
+            "pregunta": id_pregunta,
+            "encuesta": id_encuesta
+        })
+        db.commit()
+        return {"message": "Respuesta guardada exitosamente"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al guardar respuesta: {e}")
