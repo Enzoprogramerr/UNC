@@ -11,8 +11,6 @@ from sqlalchemy.sql import text
 from typing import List
 from pydantic import BaseModel
 
-
-
 load_dotenv()
 
 MYSQL_HOST = os.getenv("MYSQL_HOST")
@@ -42,13 +40,9 @@ class Docente(BaseModel):
     dni: str
     email: str
 
-class Respuesta(BaseModel): 
-    respuesta: str 
-    fecha: str 
-    
-    class Config: 
+    class Config:
         orm_mode = True
-        
+      
 @app.post("/docentes/")
 def create_docente(apellido: str, nombre: str, dni: str, email: str, db: Session = Depends(get_db)):
     try:
@@ -67,16 +61,37 @@ def read_docentes(db: Session = Depends(get_db)):
     docentes = result.fetchall()
     return docentes
 
+@app.get("/docente/{docente_id}", response_model=Docente)
+def get_docente(docente_id: int, db: Session = Depends(get_db)):
+    result = db.execute(text("SELECT apellido, nombre FROM docente WHERE id = :id"), {"id": docente_id})
+    docente = result.fetchone()
+    if not docente:
+        raise HTTPException(status_code=404, detail="Docente no encontrado")
+    return {"apellido": docente.apellido, "nombre": docente.nombre}
+
+
+class Respuesta(BaseModel):
+    respuesta: str
+    fecha: str
+    encuestado: str  # Nuevo campo
+
+    class Config:
+        from_attributes = True 
+
 @app.post("/respuestas/")
 def create_respuesta(respuesta: Respuesta, db: Session = Depends(get_db)):
     try:
         id_pregunta = 1  
         id_encuesta = 2  
         
-        query = text("INSERT INTO respuestas (respuesta, fecha, pregunta, encuesta) VALUES (:respuesta, :fecha, :pregunta, :encuesta)")
+        query = text(
+            "INSERT INTO respuesta (respuesta, fecha, encuestado, pregunta, encuesta) "
+            "VALUES (:respuesta, :fecha, :encuestado, :pregunta, :encuesta)"
+        )
         db.execute(query, {
             "respuesta": respuesta.respuesta,
             "fecha": respuesta.fecha,
+            "encuestado": respuesta.encuestado,  # Nuevo campo añadido
             "pregunta": id_pregunta,
             "encuesta": id_encuesta
         })
@@ -85,3 +100,47 @@ def create_respuesta(respuesta: Respuesta, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al guardar respuesta: {e}")
+
+## ALTER TABLE respuesta ADD COLUMN encuestado VARCHAR(255);
+
+
+
+
+
+
+class EspacioCurricular(BaseModel):
+    id: int
+    nombre: str
+    plan_estudio: str
+    anio: str
+    carrera: str
+
+    class Config:
+        orm_mode = True
+
+@app.get("/espacio_curricular/{espacio_id}", response_model=EspacioCurricular)
+def get_espacio_curricular(espacio_id: int, db: Session = Depends(get_db)):
+    result = db.execute(text("SELECT nombre FROM espacio_curricular WHERE id = :id"), {"id": espacio_id})
+    espacio = result.fetchone()
+    if not espacio:
+        raise HTTPException(status_code=404, detail="Espacio curricular no encontrado")
+    return {"nombre": espacio.nombre}
+
+class EncuestaOut(BaseModel):
+    docente_id: int
+    espacio_id: int
+
+    class Config:
+        orm_mode = True
+
+@app.get("/encuesta/{encuesta_id}", response_model=EncuestaOut)
+def get_encuesta(encuesta_id: int, db: Session = Depends(get_db)):
+    result = db.execute(text("SELECT docente_id, espacio_id FROM encuesta WHERE id = :id"), {"id": encuesta_id})
+    encuesta = result.fetchone()
+    if not encuesta:
+        raise HTTPException(status_code=404, detail="Encuesta no encontrada")
+    return {"docente_id": encuesta.docente_id, "espacio_id": encuesta.espacio_id}
+
+
+
+
